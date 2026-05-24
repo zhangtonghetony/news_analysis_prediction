@@ -1,0 +1,20 @@
+[05/19/26 18:43:31] INFO [client:huge_config.py:50] Retrieved API version information from the server: 1.7.0.
+[05/19/26 18:50:59] INFO [client:huge_config.py:50] Retrieved API version information from the server: 1.7.0.
+[05/19/26 18:50:59] ERROR [client:util.py:107] POST: 500 Server Error: Internal Server Error for url: http://127.0.0.1:8080/graphs/root/graph/vertices
+[Body]: {"label": "people", "properties": {"name": "张三", "description": "某突击队现场前线指挥官，负责叙利亚地区的撤侨行动。", "embedding": [0.0386, -0.1234, 0.5678, 0.0012]}}
+[Server Exception]: class java.lang.NullPointerException
+[05/19/26 18:51:53] INFO [client:huge_config.py:50] Retrieved API version information from the server: 1.7.0.
+[05/19/26 18:51:53] ERROR [client:util.py:107] POST: 500 Server Error: Internal Server Error for url: http://127.0.0.1:8080/graphs/root/graph/vertices
+[Body]: {"label": "people", "properties": {"name": "张三", "description": "某突击队现场前线指挥官，负责叙利亚地区的撤侨行动。", "embedding": [0.0386, -0.1234, 0.5678, 0.0012]}}
+[Server Exception]: class java.lang.NullPointerException
+[05/19/26 18:55:16] INFO [client:huge_config.py:50] Retrieved API version information from the server: 1.7.0.
+[05/19/26 18:57:50] INFO [client:huge_config.py:50] Retrieved API version information from the server: 1.7.0.
+[05/19/26 18:58:20] INFO [client:huge_config.py:50] Retrieved API version information from the server: 1.7.0.
+[05/19/26 18:59:36] INFO [client:huge_config.py:50] Retrieved API version information from the server: 1.7.0.
+[05/19/26 18:59:36] ERROR [client:util.py:107] POST: 500 Server Error: Internal Server Error for url: http://127.0.0.1:8080/graphs/root/graph/vertices
+[Body]: {"label": "people", "properties": {"name": "普京", "description": "俄罗斯现任总统，近日签署了关于进一步扩大军队编制的法令。", "embedding": [0.1524, -0.3412, 0.8871, 0.0456]}}
+[Server Exception]: class java.lang.NullPointerException
+[05/19/26 19:00:22] INFO [client:huge_config.py:50] Retrieved API version information from the server: 1.7.0.
+[05/19/26 19:00:22] ERROR [client:util.py:107] POST: 500 Server Error: Internal Server Error for url: http://127.0.0.1:8080/graphs/root/graph/vertices
+[Body]: {"label": "people", "properties": {"name": "普京", "description": "俄罗斯现任总统，近日签署了关于进一步扩大军队编制的法令。", "embedding": [0.1524, -0.3412, 0.8871, 0.0456]}}
+[Server Exception]: class java.lang.NullPointerException

@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地缘政治、军事与金融 analysis 系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #0a0e17 0%, #1a1f35 50%, #0d1321 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        /* 头部样式 */
+        .header {
+            background: linear-gradient(90deg, #1e3a5f 0%, #2d4a6f 50%, #1e3a5f 100%);
+            padding: 15px 30px;
+            border-bottom: 2px solid #4a6fa5;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #4a90d9, #2d5a87);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 0 15px rgba(74, 144, 217, 0.4);
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #6ab0ff, #a8d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .collect-btn {
+            background: linear-gradient(135deg, #2d5a87, #1e3a5f);
+            border: 1px solid #4a90d9;
+            color: #6ab0ff;
+            padding: 10px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .collect-btn:hover {
+            background: linear-gradient(135deg, #3d6a97, #2e4a6f);
+            box-shadow: 0 0 15px rgba(74, 144, 217, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .collect-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+
+        /* 查询区域 */
+        .query-section {
+            background: linear-gradient(180deg, #1a1f35 0%, #151a28 100%);
+            border: 1px solid #2d4a6f;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #6ab0ff;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2d4a6f;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: linear-gradient(180deg, #4a90d9, #2d5a87);
+            border-radius: 2px;
+        }
+
+        .query-input {
+            width: 100%;
+            height: 120px;
+            background: #0d1321;
+            border: 1px solid #2d4a6f;
+            border-radius: 8px;
+            padding: 15px;
+            color: #e8e8e8;
+            font-size: 14px;
+            resize: none;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .query-input:focus {
+            outline: none;
+            border-color: #4a90d9;
+            box-shadow: 0 0 15px rgba(74, 144, 217, 0.2);
+        }
+
+        .query-input::placeholder {
+            color: #5a6a8a;
+        }
+
+        .submit-btn {
+            width: 100%;
+            margin-top: 15px;
+            background: linear-gradient(135deg, #4a90d9, #2d5a87);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .submit-btn:hover {
+            background: linear-gradient(135deg, #5a9fe9, #3d6a97);
+            box-shadow: 0 0 20px rgba(74, 144, 217, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* 检索到的节点 */
+        .nodes-section {
+            background: linear-gradient(180deg, #1a1f35 0%, #151a28 100%);
+            border: 1px solid #2d4a6f;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .nodes-section::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .nodes-section::-webkit-scrollbar-track {
+            background: #0d1321;
+            border-radius: 3px;
+        }
+
+        .nodes-section::-webkit-scrollbar-thumb {
+            background: #2d4a6f;
+            border-radius: 3px;
+        }
+
+        .node-item {
+            background: #0d1321;
+            border: 1px solid #2d4a6f;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .node-item:hover {
+            border-color: #4a90d9;
+            background: #121a2d;
+        }
+
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .node-name {
+            font-weight: 600;
+            color: #6ab0ff;
+        }
+
+        .node-type {
+            font-size: 12px;
+            color: #8a9ab0;
+            background: #1e3a5f;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .node-description {
+            font-size: 13px;
+            color: #a0a8b8;
+            line-height: 1.5;
+        }
+
+        .relation-arrow {
+            color: #4a90d9;
+            margin: 0 5px;
+        }
+
+        /* 回答区域 */
+        .answer-section {
+            background: linear-gradient(180deg, #1a1f35 0%, #151a28 100%);
+            border: 1px solid #2d4a6f;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .answer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2d4a6f;
+        }
+
+        .answer-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #6ab0ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4a90d9;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .clear-btn {
+            background: transparent;
+            border: 1px solid #4a90d9;
+            color: #4a90d9;
+            padding: 6px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .clear-btn:hover {
+            background: #4a90d9;
+            color: white;
+        }
+
+        .answer-content {
+            flex: 1;
+            font-size: 15px;
+            line-height: 1.8;
+            color: #d0d8e8;
+            overflow-y: auto;
+            max-height: 65vh;
+            padding-right: 5px;
+        }
+
+        .answer-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .answer-content::-webkit-scrollbar-thumb {
+            background: #2d4a6f;
+            border-radius: 3px;
+        }
+
+        .answer-content:empty::before {
+            content: '在此显示分析报告...';
+            color: #5a6a8a;
+            font-style: italic;
+        }
+
+        /* 💡 优雅的 Markdown 流式排版适配样式 */
+        .answer-content h1, .answer-content h2, .answer-content h3 {
+            color: #6ab0ff;
+            margin: 15px 0 10px 0;
+            font-weight: 600;
+        }
+        .answer-content h3 { font-size: 17px; }
+        .answer-content p { margin-bottom: 12px; text-align: justify; }
+        .answer-content strong { color: #fff; font-weight: 600; }
+        .answer-content ul, .answer-content ol { margin-left: 20px; margin-bottom: 12px; }
+        .answer-content li { margin-bottom: 4px; }
+
+        .thinking-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .thinking-dot {
+            width: 6px;
+            height: 6px;
+            background: #4a90d9;
+            border-radius: 50%;
+            animation: think 1s infinite;
+        }
+
+        .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes think {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* 状态提示 */
+        .status-bar {
+            background: linear-gradient(90deg, #1e3a5f, #2d4a6f);
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #6ab0ff;
+            max-width: 1400px;
+            margin: 20px auto 0 auto;
+        }
+
+        .status-success { color: #4ade80; }
+        .status-warning { color: #fbbf24; }
+        .status-error { color: #f87171; }
+
+        /* 军事风格装饰 */
+        .camouflage-bg {
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(45, 74, 111, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(74, 144, 217, 0.05) 0%, transparent 50%);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .nodes-section {
+                max-height: 300px;
+            }
+        }
+    </style>
+</head>
+<body class="camouflage-bg">
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <div class="logo-text">地缘政治与金融分析系统</div>
+            </div>
+            <button class="collect-btn" id="collectBtn">
+                <span>📊</span>
+                <span id="collectText">收集数据</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="status-bar" id="statusBar" style="display: none;">
+        <span id="statusIcon">📡</span>
+        <span id="statusMessage"></span>
+    </div>
+
+    <div class="main-content">
+        <div class="left-panel">
+            <div class="query-section">
+                <div class="section-title">输入查询</div>
+                <textarea 
+                    class="query-input" 
+                    id="queryInput" 
+                    placeholder="请输入您的地缘政治、军事或金融分析问题...&#10;&#10;例如：&#10;最近以色列在黎巴嫩南部的军事行动会对金融避险资产产生什么传导影响？&#10;美国加息政策对新兴 market 的影响分析"></textarea>
+                <button class="submit-btn" id="submitBtn">
+                    <span>🔍</span>
+                    <span>开始分析</span>
+                </button>
+            </div>
+
+            <div class="nodes-section">
+                <div class="section-title">
+                    <span>检索到的节点</span>
+                    <span id="nodesCount" style="margin-left: auto; font-weight: normal; font-size: 13px;">0 条</span>
+                </div>
+                <div id="nodesContainer"></div>
+            </div>
+        </div>
+
+        <div class="answer-section">
+            <div class="answer-header">
+                <div class="answer-title">
+                    <span>📈</span>
+                    <span>分析报告</span>
+                    <span class="status-dot" id="statusDot" style="display: none;"></span>
+                    <span class="thinking-indicator" id="thinkingIndicator" style="display: none;">
+                        <span class="thinking-dot"></span>
+                        <span class="thinking-dot"></span>
+                        <span class="thinking-dot"></span>
+                    </span>
+                </div>
+                <button class="clear-btn" id="clearBtn">清空</button>
+            </div>
+            <div class="answer-content" id="answerContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // DOM 元素声明
+        const queryInput = document.getElementById('queryInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const answerContent = document.getElementById('answerContent');
+        const nodesContainer = document.getElementById('nodesContainer');
+        const nodesCount = document.getElementById('nodesCount');
+        const statusDot = document.getElementById('statusDot');
+        const thinkingIndicator = document.getElementById('thinkingIndicator');
+        const clearBtn = document.getElementById('clearBtn');
+        const collectBtn = document.getElementById('collectBtn');
+        const collectText = document.getElementById('collectText');
+        const statusBar = document.getElementById('statusBar');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // 全局全局文本变量，维护大模型未被转义的 Markdown 原文
+        let rawAnswerMarkdown = "";
+
+        // 显示状态提示句柄
+        function showStatus(message, type = 'info') {
+            statusBar.style.display = 'flex';
+            statusMessage.textContent = message;
+            
+            switch(type) {
+                case 'success':
+                    statusIcon.textContent = '✅';
+                    statusBar.className = 'status-bar status-success';
+                    break;
+                case 'warning':
+                    statusIcon.textContent = '⚠️';
+                    statusBar.className = 'status-bar status-warning';
+                    break;
+                case 'error':
+                    statusIcon.textContent = '❌';
+                    statusBar.className = 'status-bar status-error';
+                    break;
+                default:
+                    statusIcon.textContent = '📡';
+                    statusBar.className = 'status-bar';
+            }
+            
+            if (type !== 'warning') {
+                setTimeout(() => {
+                    statusBar.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // 核心：提交流式查询接口
+        submitBtn.addEventListener('click', async () => {
+            const query = queryInput.value.trim();
+            if (!query) {
+                showStatus('请输入查询内容', 'warning');
+                return;
+            }
+
+            // UI 状态重置与清洗
+            answerContent.innerHTML = '';
+            nodesContainer.innerHTML = '';
+            nodesCount.textContent = '0 条';
+            rawAnswerMarkdown = ''; 
+
+            // 激活加载及思考指示器
+            submitBtn.disabled = true;
+            statusDot.style.display = 'inline-block';
+            thinkingIndicator.style.display = 'inline-flex';
+
+            try {
+                // 基于 Fetch API 开启 POST 请求，读取底层 ReadableStream
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP 异常! 状态码: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = ''; // 🟢 建立数据缓冲区，完美抵抗因网络因素导致的数据断包与粘包
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    // 将网络碎片注入缓冲区
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    
+                    // 核心关键：弹出并暂存未闭合的末尾流残片，其余行推进业务解析
+                    buffer = lines.pop(); 
+                    
+                    for (const line of lines) {
+                        const trimmedLine = line.trim();
+                        if (trimmedLine.startsWith('data: ')) {
+                            try {
+                                const jsonStr = trimmedLine.substring(6).trim();
+                                if (!jsonStr) continue;
+                                
+                                const parsedData = JSON.parse(jsonStr);
+                                
+                                // 🟢 完美对齐后端修正后的 'nodes' 标志
+                                if (parsedData.type === 'nodes') {
+                                    displayNodes(parsedData.data);
+                                } 
+                                // 🟢 持续无缝追加大模型正文
+                                else if (parsedData.type === 'answer') {
+                                    rawAnswerMarkdown += parsedData.data;
+                                    // 运用 Marked 库将 Markdown 原文实时编译为美观的 HTML 网页元素
+                                    answerContent.innerHTML = marked.parse(rawAnswerMarkdown);
+                                    // 自动触底滚动，优化视觉纵深
+                                    answerContent.scrollTop = answerContent.scrollHeight;
+                                }
+                            } catch (e) {
+                                // 针对边界极小概率的微瑕碎数据包做兼容忽略
+                                console.warn("流解析异常处理并跳过: ", e);
+                            }
+                        }
+                    }
+                }
+
+                showStatus('分析完成', 'success');
+            } catch (error) {
+                console.error('查询失败:', error);
+                answerContent.textContent = '查询失败，请稍后重试。原因: ' + error.message;
+                showStatus('查询失败: ' + error.message, 'error');
+            } finally {
+                // 解除锁定并隐藏指示器
+                submitBtn.disabled = false;
+                statusDot.style.display = 'none';
+                thinkingIndicator.style.display = 'none';
+            }
+        });
+
+        // 渲染图谱实体与关联关系列表
+        function displayNodes(nodes) {
+            nodesContainer.innerHTML = '';
+            if (!nodes || !Array.isArray(nodes)) {
+                nodesCount.textContent = '0 条';
+                return;
+            }
+            nodesCount.textContent = `${nodes.length} 条`;
+
+            nodes.forEach(node => {
+                const nodeItem = document.createElement('div');
+                nodeItem.className = 'node-item';
+                
+                if (node.type === 'entity') {
+                    nodeItem.innerHTML = `
+                        <div class="node-header">
+                            <span class="node-name">${escapeHtml(node.name)}</span>
+                            <span class="node-type">${escapeHtml(node.entity_type || '实体')}</span>
+                        </div>
+                        <div class="node-description">${escapeHtml(node.description || '无描述')}</div>
+                    `;
+                } else if (node.type === 'relationship') {
+                    nodeItem.innerHTML = `
+                        <div class="node-header">
+                            <span class="node-name">
+                                ${escapeHtml(node.source)}
+                                <span class="relation-arrow">──(${escapeHtml(node.label)})──►</span>
+                                ${escapeHtml(node.target)}
+                            </span>
+                            <span class="node-type">关系</span>
+                        </div>
+                        <div class="node-description">${escapeHtml(node.description || '无描述')}</div>
+                    `;
+                }
+                
+                nodesContainer.appendChild(nodeItem);
+            });
+        }
+
+        // 标准安全转义
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 清空重置视图
+        clearBtn.addEventListener('click', () => {
+            answerContent.innerHTML = '';
+            nodesContainer.innerHTML = '';
+            nodesCount.textContent = '0 条';
+            queryInput.value = '';
+            rawAnswerMarkdown = '';
+        });
+
+        // 数据离线吞吐/知识图谱构建指令触发
+        collectBtn.addEventListener('click', async () => {
+            if (collectBtn.disabled) return;
+
+            collectBtn.disabled = true;
+            collectText.textContent = '收集中...';
+
+            try {
+                const response = await fetch('/collect_data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+                showStatus(result.message, result.status === 'running' ? 'warning' : 'success');
+
+                if (result.status === 'started' || result.status === 'running') {
+                    checkCollectStatus();
+                } else {
+                    collectBtn.disabled = false;
+                    collectText.textContent = '收集数据';
+                }
+            } catch (error) {
+                console.error('数据收集失败:', error);
+                showStatus('数据收集失败: ' + error.message, 'error');
+                collectBtn.disabled = false;
+                collectText.textContent = '收集数据';
+            }
+        });
+
+        // 定时轮询图谱知识抽取状态
+        async function checkCollectStatus() {
+            try {
+                const response = await fetch('/collect_status');
+                const result = await response.json();
+
+                if (result.is_collecting) {
+                    setTimeout(checkCollectStatus, 3000);
+                } else {
+                    collectBtn.disabled = false;
+                    collectText.textContent = '收集数据';
+                    showStatus('数据收集完成', 'success');
+                }
+            } catch (error) {
+                console.error('检查状态失败:', error);
+                collectBtn.disabled = false;
+                collectText.textContent = '收集数据';
+            }
+        }
+
+        // 快捷热键监听：Ctrl + Enter 极速提交
+        queryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault(); // 阻断默认换行
+                submitBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
