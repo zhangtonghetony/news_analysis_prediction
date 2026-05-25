@@ -94,7 +94,8 @@ class EntityExtractor:
         entities = self._extract_entities(text)
         result_vectors = self._entity_embedding(entities)
         for i in range(len(entities)):
-             entities[i]['embeddings'] = result_vectors[i]
+            entities[i]['embeddings'] = result_vectors[i]
+            
         return entities
 
 

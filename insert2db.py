@@ -3,6 +3,7 @@ import urllib.parse
 import json
 from config import config
 from fetch_data import NewsFetcher
+from spider_news import NewsSpider
 from entities_extraction import EntityExtractor
 from relations_extraction import RelationsExtractor
 from openai import OpenAI
@@ -10,6 +11,7 @@ from openai import OpenAI
 newsfetcher = NewsFetcher()
 entityextractor = EntityExtractor()
 relationextractor = RelationsExtractor()
+spider = NewsSpider()
 
 
 # 将把新闻数据转换为实体和关系功能封装为一个函数transform_news
@@ -61,7 +63,7 @@ class GraphDBHandler:
         """
         添加/更新顶点（完全防御版：解决空格URL问题 + 严格白名单过滤）
         """
-        # 🚨 核心防御 1：对包含空格或特殊字符的顶点名称进行标准 URL 编码
+        # 核心防御 1：对包含空格或特殊字符的顶点名称进行标准 URL 编码
         safe_name = urllib.parse.quote(properties["name"])
         vertex_id = f"11:{safe_name}"
 
@@ -71,6 +73,7 @@ class GraphDBHandler:
 
         try:
             get_response = requests.get(get_url)
+            # 检查响应状态码是否为 200（成功），以此判断顶点是否存在
             if get_response.status_code == 200:
                 existing_vertex = get_response.json()
         except requests.exceptions.RequestException as e:
@@ -102,7 +105,7 @@ class GraphDBHandler:
                     f"{old_desc} | 最新线索：{new_desc}"
                 )
                 print(
-                    f"🔄 正在为融合后的实体 【{properties['name']}】 重新生成向量..."
+                    f"正在为融合后的实体 【{properties['name']}】 重新生成向量..."
                 )
                 response = self.client.embeddings.create(
                     model=config["embedding_model"],
@@ -110,9 +113,9 @@ class GraphDBHandler:
                 )
                 raw_properties["embedding"] = response.data[0].embedding
 
-        # 🚨 核心防御 2：属性严格清洗白名单！
-        # 假设你在 Hubble 里的实体属性【只建了】这 4 个，那就只允许这 4 个 Key 提交给后端！
-        # 如果你还建了别属性（比如 category），请把它加进这个列表里。
+        #  核心防御 2：属性严格清洗白名单
+        # 假设Hubble 里的实体属性【只建了】这 4 个，那就只允许这 4 个 Key 提交给后端！
+        # 如果还建了别属性（比如 category），把它加进这个列表里。
         ALLOWED_KEYS = ["name", "entity_type", "description", "embedding"]
 
         final_cleaned_props = {}
@@ -135,8 +138,8 @@ class GraphDBHandler:
                 f"❌ 写入/更新顶点 【{properties['name']}】 彻底失败: {e}"
             )
             if post_response is not None:
-                # 🌟 这里将向你吐露它最后为什么不爽（比如具体哪个属性没对齐）
-                print(f"👉 【HugeGraph 后端真实拒绝原因】: {post_response.text}")
+                # 这里将向你吐露它最后为什么不爽（比如具体哪个属性没对齐）
+                print(f"【HugeGraph 后端真实拒绝原因】: {post_response.text}")
             return None
     
     def add_edge(self, properties: dict):
@@ -174,7 +177,7 @@ class GraphDBHandler:
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"❌ 插入边失败: {e}")
-            # 🚨 核心改动：只要 response 拿到了，不管 raise_for_status 怎么闹，我们强行打印出后端吐的所有文本
+            #  核心改动：只要 response 拿到了，不管 raise_for_status 怎么闹，我们强行打印出后端吐的所有文本
             if response is not None:
                 print(f"👉 【HugeGraph 后端真实死因】: {response.text}")
             else:
@@ -198,8 +201,25 @@ def insert_news_to_db():
         for relation in relations:
             graph_handler.add_edge(relation)
 
+# 从爬虫获取的新闻中提取实体和关系，并插入至数据库
+def insert_sp_news_to_db():
+    news_list = spider.get_news_list()
+    for news in news_list[:10]:
+        detail_url = news['url']
+        text = spider.crawl_detail_page(detail_url)
+        if text:
+            entities = entityextractor.final_extract_entities(text)
+            for entity in entities:
+                graph_handler.add_vertex(entity)
+            
+            relations = relationextractor.final_extract_relations(entities, text)
+            for relation in relations:
+                graph_handler.add_edge(relation)
 
-# 明天任务：进入查询逻辑开发阶段，用户询问-->向量检索-->语法检索扩展范围-->打包发给大模型-->返回结果
+
+
+
+
 
 
 if __name__ == '__main__':
@@ -226,5 +246,5 @@ if __name__ == '__main__':
     #     'embeddings': embedding
     # }
     # )
-    insert_news_to_db()
+    insert_sp_news_to_db()
     

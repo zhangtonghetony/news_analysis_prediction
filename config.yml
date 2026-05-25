@@ -1,17 +1,17 @@
 language_model: qwen3.5-plus
 query_model: qwen3-max
 embedding_model: text-embedding-v4
-api_key: your-key
+api_key: sk-3388b7a160aa42fd9d31dec0ae55adcd
 base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
 
 
-domestic_api_key: your-key
+domestic_api_key: 734c11f5b3fb43fbabbfa3979c13440c
 domestic_url: https://apis.tianapi.com/caijing/index
 domestic_num: 10
 
 
 
-foreign_api_key: your-key
+foreign_api_key: 762da62fc8msha2ea4d1a6fdc97ap12f8f0jsna94839c15aab
 foreign_url: https://real-time-news-data.p.rapidapi.com/full-story-coverage
 host: real-time-news-data.p.rapidapi.com
 content_type: application/json

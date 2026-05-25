@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, Response, jsonify
 from query_from_db import QueryDB
-from insert2db import insert_news_to_db
+from spider_news import NewsSpider
+from insert2db import insert_news_to_db, GraphDBHandler
+from entities_extraction import EntityExtractor
+from relations_extraction import RelationsExtractor
 import threading
 import time
 import json
@@ -10,8 +13,25 @@ app = Flask(__name__)
 # 初始化查询引擎
 query_engine = QueryDB()
 
+# 初始化新闻爬虫
+spider = NewsSpider()
+
+# 初始化实体提取器
+entity_extractor = EntityExtractor()
+
+# 初始化关系提取器
+relation_extractor = RelationsExtractor()
+
+# 初始化图数据库处理器
+graph_handler = GraphDBHandler()
+
 # 标记数据收集任务是否正在运行
 is_collecting = False
+
+# 数据库操作锁
+db_lock = threading.Lock()
+
+
 
 def scheduled_data_collection():
     """
@@ -25,7 +45,8 @@ def scheduled_data_collection():
         try:
             print("⏰ 定时任务触发：开始数据收集...")
             is_collecting = True
-            insert_news_to_db()
+            with db_lock:
+                insert_news_to_db()
             print("✅ 定时数据收集完成")
             is_collecting = False
         except Exception as e:
@@ -36,6 +57,81 @@ def scheduled_data_collection():
 
 # 启动定时任务线程
 threading.Thread(target=scheduled_data_collection, daemon=True).start()
+
+
+# 全局去重列表：存储所有已经提取过实体新闻的 aid
+processed_aid_list = []
+
+def continuous_spider_flow():
+    """
+    流式爬虫：高频不间断运行，并具备前置去重与并发锁保护
+    """
+    global processed_aid_list
+    print("不间断流式爬虫线程已启动...")
+    
+    while True:
+        try:
+            print("不间断流式爬虫开始新一轮高频增量抓取...")
+            
+            # 获取最新的新闻列表（这一步只是单纯的网络请求，不需要加锁）
+            news_list = spider.get_news_list()
+            
+            # 筛选出未处理过的新闻
+            unprocessed_news = []
+            for news in news_list[:10]:
+                aid = news['aid']
+                if aid not in processed_aid_list:
+                    unprocessed_news.append(news)
+            
+            if not unprocessed_news:
+                print("📭 本轮没有发现未处理的新闻")
+            else:
+                print(f"🔥 发现 {len(unprocessed_news)} 条未处理的全新突发新闻")
+                
+                # 第二步：处理未处理的新闻（爬虫抓取不需要加锁）
+                for news in unprocessed_news:
+                    aid = news['aid']
+                    title = news.get('title', '')
+                    detail_url = news['url']
+                    
+                    # 抓取正文（爬虫时不需要上锁）
+                    text = spider.crawl_detail_page(detail_url)
+                    
+                    if text:
+                        print(f"📄 正在处理新闻: {title}")
+                        
+                        # 提取实体和关系（提取过程比较耗时，不需要加锁）
+                        entities = entity_extractor.final_extract_entities(text)
+                        relations = relation_extractor.final_extract_relations(entities, text)
+                        
+                        # 第三步：真正往 HugeGraph 写入数据时，必须上锁，防止并发冲突
+                        with db_lock:
+                            print(f"🔒 [流式爬虫] 正在安全写入新闻 {aid} 的图谱数据...")
+                            
+                            # 写入实体顶点
+                            for entity in entities:
+                                graph_handler.add_vertex(entity)
+                            
+                            # 写入关系边
+                            for relation in relations:
+                                graph_handler.add_edge(relation)
+                            
+                            # 将 aid 添加到去重列表
+                            processed_aid_list.append(aid)
+                            
+                            print(f"🔓 [流式爬虫] 新闻 {aid} 数据写入完毕，释放锁。")
+                    else:
+                        print(f"⏭️ 新闻 {aid} 正文为空，跳过处理")
+                        
+        except Exception as e:
+            print(f"❌ [流式爬虫] 运行时发生异常: {e}")
+            
+        # 本轮增量检查结束，休眠 30 分钟，等待下一波突发新闻
+        print("不间断流式爬虫进入 30 分钟休眠等待期...")
+        time.sleep(30 * 60)
+
+threading.Thread(target=continuous_spider_flow, daemon=True).start()
+
 
 @app.route('/')
 def index():
@@ -91,8 +187,9 @@ def collect_data():
         global is_collecting
         try:
             is_collecting = True
-            insert_news_to_db()
-            print("✅ 手动触发数据收集完成")
+            with db_lock:
+                insert_news_to_db()
+                print("✅ 手动触发数据收集完成")
         except Exception as e:
             print(f"❌ 手动触发数据收集失败: {e}")
         finally:
