@@ -1,4 +1,4 @@
-language_model: qwen3.5-plus
+language_model: qwen3.5-flash
 query_model: qwen3-max
 embedding_model: text-embedding-v4
 api_key: sk-3388b7a160aa42fd9d31dec0ae55adcd

@@ -68,6 +68,7 @@ def continuous_spider_flow():
     """
     global processed_aid_list
     print("不间断流式爬虫线程已启动...")
+    time.sleep(30 * 60)
     
     while True:
         try:

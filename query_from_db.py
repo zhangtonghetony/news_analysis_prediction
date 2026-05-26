@@ -120,7 +120,7 @@ class QueryDB:
                             valid_edges[idx]["score"] = float(sim_score)
                             edges_matched.append(valid_edges[idx])
 
-            # 💡 保持 Top-5 截断逻辑
+            # 保持 Top-5 截断逻辑
             vertices_matched = sorted(vertices_matched, key=lambda x: x.get("score", 0), reverse=True)[:5]
             edges_matched = sorted(edges_matched, key=lambda x: x.get("score", 0), reverse=True)[:5]
 
@@ -133,53 +133,67 @@ class QueryDB:
 
     def _graph_traversal_extension(self, seed_vertices: list[dict]) -> list[dict]:
         """
-        从种子顶点出发，利用语法/拓扑检索周围的邻居顶点与关联边 (K-Hop 扩散)
+        既返回关系（relationship），也返回节点（entity），确保与数据流水线全兼容
         """
-        extended_subgraph_triplets = []
+        # 初始化结果列表
+        results = []
+        # 检查种子顶点是否为空，如果为空则直接返回空列表
         if not seed_vertices:
             return []
-
-        # 抽取所有种子顶点的 ID
-        vertex_ids = [v.get("id") for v in seed_vertices if v.get("id")]
         
-        # 这里使用标准 Gremlin 实现：从指定顶点出发，向外扩散(limit=30限制)，捞出路径上的所有边和点(path)
-        # bothE() 表示检索所有出边和入边, bothV() 表示检索所有顶点(包含种子顶点,所以最后需要去重)
-        gremlin_query = f"g.V({json.dumps(vertex_ids)}).bothE().bothV().path().limit(30)"
+        # 遍历处理每个种子顶点
+        for v in seed_vertices:
+            # 提取顶点 ID
+            vid = v.get("id")
+            if not vid: continue
         
-        try:
-            response = requests.post(
-                f"{self.base_url}/jobs/gremlin", 
-                json={"gremlin": gremlin_query}
-            )
-            if response.status_code == 200:
-                # response:Response类对象;第一次get得到result:dict;paths:list[dict]
-                paths = response.json().get("result", {}).get("data", [])
-                # 解析路径，将其转化为易于大模型阅读的三元组结构
-                for path in paths:
-                    # 路径通常交替出现: [Vertex, Edge, Vertex]
-                    objects = path.get("objects", [])
-                    if len(objects) >= 3:
-                        for i in range(0, len(objects) - 2, 2):
-                            source_v = objects[i]
-                            edge = objects[i+1]
-                            target_v = objects[i+2]
-                            edge_props = edge.get("properties", {})
-                            
-                            triplet = {
-                                "source": source_v.get("properties", {}).get("name", source_v.get("id")),
-                                "target": target_v.get("properties", {}).get("name", target_v.get("id")),
-                                "label": edge.get("label"),
-                                "description": edge.get("properties", {}).get("description", "关联事件"),
-                                "type": "relationship",
-                                "score": float(edge_props.get("score")) if edge_props.get("score") else 0.0,
-                                "time": edge_props.get("time", "") 
-                            }
-                            if triplet not in extended_subgraph_triplets:
-                                extended_subgraph_triplets.append(triplet)
-        except Exception as e:
-            print(f"⚠️ 语法检索扩展子图失败: {e}")
+            try:
+                encoded_id = urllib.parse.quote(f'"{vid}"', safe="")
+                # 先获取与种子节点相关的所有边
+                edge_url = f"{self.base_url.replace('/gremlin', '')}/graph/edges?vertex_id={encoded_id}&direction=BOTH"
+                edge_resp = requests.get(edge_url, timeout=10)
             
-        return extended_subgraph_triplets
+                if edge_resp.status_code != 200: continue
+            
+                edges = edge_resp.json().get("edges", [])
+                for edge in edges:
+                    # 确定邻居 ID
+                    out_v = edge.get("outV")
+                    in_v = edge.get("inV")
+                    target_id = in_v if out_v == vid else out_v
+                
+                    # 获取邻居节点详情
+                    node_url = f"{self.base_url.replace('/gremlin', '')}/graph/vertices/{urllib.parse.quote(f'\"{target_id}\"', safe='')}"
+                    node_resp = requests.get(node_url, timeout=10)
+                
+                    if node_resp.status_code == 200:
+                        node_data = node_resp.json()
+                        props = node_data.get("properties", {})
+                        
+                        # 把节点作为 'entity' 类型加入结果
+                        results.append({
+                            "type": "entity",
+                            "name": props.get("name", target_id),
+                            "entity_type": props.get("entity_type", "Unknown"),
+                            "description": props.get("description", "")
+                        })
+                        
+                        # 把关系三元组加入结果列表
+                        edge_props = edge.get("properties", {})
+                        results.append({
+                            "type": "relationship",
+                            "source": v.get("properties", {}).get("name", vid),
+                            "target": props.get("name", target_id), # 使用真实名字
+                            "label": edge.get("label", "related_to"),
+                            "description": edge_props.get("description", "关联事件"),
+                            "score": float(edge_props.get("score", 0.0)),
+                            "time": edge_props.get("time", "unknown")
+                        })
+            
+            except Exception as e:
+                print(f"⚠️ 拓扑检索异常: {e}")
+            
+        return results
 
     def _generate_answer(self, query: str, context_data: list[dict]):
         """

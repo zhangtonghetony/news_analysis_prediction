@@ -1,93 +1,68 @@
-# import urllib
-# params = urllib.parse.urlencode({'key':'734c11f5b3fb43fbabbfa3979c13440c','num':'10'})
-# print(params)
-
-# for i in range(0,50,25):
-#     print(i)
-
-
-# result=list(zip([1,2,3],[4,5,6]))
-# for a,b in result:
-#     print(a,b,end=' ')
-
-# for a,b in zip([1,2,3],[4,5,6]):
-#     print(a,b,end=' ')
-
 import requests
+import urllib.parse
 import json
-from config import config
 
-def inspect_embedding_data():
-    # 组装基础 URL
-    graph_url = config['graph_url']
-    graph_port = config['graph_port']
-    graph_name = config['graph_name']
-    base_url = f"http://{graph_url}:{graph_port}/graphs/{graph_name}"
+# ==================== 1. 请在下方填写你的测试配置 ====================
+GRAPH_HOST = "127.0.0.1"
+GRAPH_PORT = "8080"
+GRAPH_NAME = "hugegraph"
+SEED_ID = "11:俄罗斯"  # 确保这个节点在你的数据库里存在
+# ====================================================================
+
+BASE_URL = f"http://{GRAPH_HOST}:{GRAPH_PORT}/graphs/{GRAPH_NAME}"
+
+def test_rest_traversal(seed_id: str):
+    print(f"🚀 开始测试 Python 端两步遍历逻辑...")
+    print(f"种子节点: {seed_id}")
     
-    # 1. 捞取前 1 个节点
-    v_url = f"{base_url}/graph/vertices?limit=1"
+    # 编码 ID
+    encoded_id = urllib.parse.quote(f'"{seed_id}"', safe="")
+    
+    # 1. 第一步：获取与种子节点相关的所有边
+    # 接口: GET /graphs/{graph}/graph/edges?vertex_id=...
+    edge_url = f"{BASE_URL}/graph/edges?vertex_id={encoded_id}&direction=BOTH"
     
     try:
-        response = requests.get(v_url)
-        if response.status_code != 200:
-            print(f"❌ 无法连接图数据库，HTTP 状态码: {response.status_code}")
+        print(f"正在获取节点关联边: {edge_url}")
+        resp = requests.get(edge_url, timeout=5)
+        
+        if resp.status_code != 200:
+            print(f"❌ 获取边失败 (状态码: {resp.status_code}): {resp.text}")
             return
             
-        vertices = response.json().get("vertices", [])
-        if not vertices:
-            print("⚠️ 数据库里目前是个空库，没有点可供测试，请先确保跑过清洗脚本入库！")
-            return
+        edges = resp.json().get("edges", [])
+        print(f"✅ 成功获取到 {len(edges)} 条关联边。")
+        if edges:
+            print(f"🔥 原始边数据样例 (第一条): {json.dumps(edges[0], ensure_ascii=False, indent=2)}")
+        
+        # 2. 第二步：遍历边
+        for edge in edges:
+            # 💡 调试重点：检查这个边对象里到底有没有 source_id 和 target_id
+            # 有些版本里，它们是 edge.get('source_id')，有些可能是 edge.get('outV') 或其他
+            s_id = edge.get("source_id")
+            t_id = edge.get("target_id")
             
-        # 2. 抓出第一个顶点的属性
-        test_vertex = vertices[0]
-        props = test_vertex.get("properties", {})
+            # 如果这里是 None，说明字段名不对，我们得根据 print 出来的内容修改 key
+            if not t_id or not s_id:
+                print(f"❌ 关键字段缺失！当前边数据: {edge}")
+                continue
         
-        # 兼容一下你昨晚可能命名的两个字段名
-        emb_data = props.get("embeddings") or props.get("embedding")
-        
-        print("\n================ 🔬 属性探测报告 🔬 ================\n")
-        print(f"节点 ID: {test_vertex.get('id')}")
-        print(f"节点 Label: {test_vertex.get('label')}")
-        print(f"节点 Name: {props.get('name', '未知')}")
-        print("-" * 50)
-        
-        if emb_data is None:
-            print("❌ 警告：该节点的属性中没有找到 'embeddings' 或 'embedding' 字段！")
-            print(f"当前节点的所有可用属性为: {list(props.keys())}")
-            return
+        # 2. 第二步：遍历边，捞出邻居节点详情
+        for edge in edges:
+            target_id = edge.get("target_id") if edge.get("source_id") == seed_id else edge.get("source_id")
             
-        # 3. 核心大招：打印其在 Python 里的真实类型
-        data_type = type(emb_data)
-        print(f"📊 数据库吐出来的原始数据类型为: {data_type}")
-        
-        # 4. 根据类型进行差异化展示和长度测试
-        if isinstance(emb_data, str):
-            print("🟢 结论：它是个【字符串 (String)】。")
-            print(f"原始字符串前100个字符: {emb_data[:100]}...")
+            # 接口: GET /graphs/{graph}/graph/vertices/{id}
+            node_url = f"{BASE_URL}/graph/vertices/{urllib.parse.quote(f'\"{target_id}\"', safe='')}"
+            node_resp = requests.get(node_url, timeout=5)
             
-            # 尝试人肉反序列化，看看能不能还原
-            try:
-                # 检查它是符合 JSON 规范的 "[-0.04, ...]" 还是纯用逗号拼接的 "-0.04,..."
-                if not emb_data.startswith('['):
-                    # 如果没有方括号，我们人肉给它补上或者用 split
-                    parsed_list = [float(x) for x in emb_data.split(',') if x.strip()]
-                else:
-                    parsed_list = json.loads(emb_data)
-                    
-                print(f"🎉 反序列化测试成功！将其转换为 List 后，向量的真实长度为: {len(parsed_list)} 维")
-            except Exception as parse_err:
-                print(f"💥 尝试反序列化为列表时失败，错误原因: {parse_err}")
+            if node_resp.status_code == 200:
+                node_data = node_resp.json()
+                print(f"🔗 发现邻居: {target_id} | 类型: {node_data.get('label')}")
+            else:
+                print(f"⚠️ 无法获取节点详情: {target_id}")
                 
-        elif isinstance(emb_data, list):
-            print("🔵 结论：它是个原生的【列表 (List)】。")
-            print(f"向量的维度长度为: {len(emb_data)} 维")
-            print(f"前 3 个元素为: {emb_data[:3]}")
-            
-        else:
-            print(f"🟡 奇怪的未知类型: {data_type}，具体内容为: {emb_data}")
-
     except Exception as e:
-        print(f"❌ 脚本执行过程中发生异常: {e}")
+        print(f"💥 测试发生异常: {e}")
 
 if __name__ == "__main__":
-    inspect_embedding_data()
+    test_rest_traversal(SEED_ID)

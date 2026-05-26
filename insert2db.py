@@ -61,31 +61,43 @@ class GraphDBHandler:
 
     def add_vertex(self, properties: dict):
         """
-        添加/更新顶点（完全防御版：解决空格URL问题 + 严格白名单过滤）
+        添加/更新顶点（终极净化版：彻底消灭 invalid Id + 自动丢弃空节点）
         """
-        # 核心防御 1：对包含空格或特殊字符的顶点名称进行标准 URL 编码
-        safe_name = urllib.parse.quote(properties["name"])
-        vertex_id = f"11:{safe_name}"
+        # 1. 提取并彻底净化实体名字
+        raw_name = properties.get("name", "").strip()
+        
+        # 核心防御：清除名字中可能导致 JSON/URL 路径崩溃的危险字符（双引号、单引号、换行符）
+        raw_name = raw_name.replace('"', '').replace("'", "").replace('\n', '').replace('\r', '')
 
-        # 纯 HTTP 查询
-        get_url = f"{self.base_url}/graph/vertices/{vertex_id}"
+        # 🎯 核心修改：与其写入垃圾数据，不如直接在这里拦截并丢弃，不执行任何查重和后续的 POST 写入
+        if not raw_name:
+            print("🗑️ [清洗拦截] 发现实体名称净化后为空（或全危险字符），已直接丢弃该废节点。")
+            return None
+
+        # 2. 组装带前缀且被双引号强行包裹的物理 ID 字符串
+        vertex_id = f'"11:{raw_name}"'
+        # 将带有双引号和冒号的整体进行全编码（safe='' 确保 %22 和 %3A 完美生成）
+        safe_vertex_id = urllib.parse.quote(vertex_id, safe='')
+        
+        # 纯 HTTP 查询 URL
+        get_url = f"{self.base_url}/graph/vertices/{safe_vertex_id}"
         existing_vertex = None
 
         try:
             get_response = requests.get(get_url)
-            # 检查响应状态码是否为 200（成功），以此判断顶点是否存在
             if get_response.status_code == 200:
                 existing_vertex = get_response.json()
+                print(f"✨ [去重命中] 顶点已存在: 【{raw_name}】，准备进入属性融合逻辑。")
+            else:
+                # 404 或 400 等格式不匹配时，都安全判定为“未查到已有节点”
+                pass
         except requests.exceptions.RequestException as e:
-            if (
-                not hasattr(e, "response")
-                or e.response.status_code != 404
-            ):
-                print(f"查询顶点是否存在时发生网络错误: {e}")
-                return None
+            print(f"ℹ️ [网络提示] 查询顶点 【{raw_name}】 时路径未匹配或网络轻微跳变: {e}")
+            existing_vertex = None
 
         # 开始准备拼装要写入图库的属性
         raw_properties = properties.copy()
+        raw_properties["name"] = raw_name  # 使用净化后的名字
 
         # 统一转换可能存在的复数/单数 embedding 字段
         if "embeddings" in raw_properties:
@@ -95,27 +107,29 @@ class GraphDBHandler:
         if existing_vertex:
             old_props = existing_vertex.get("properties", {})
             old_desc = old_props.get("description", "")
+            if isinstance(old_desc, list) and len(old_desc) > 0:
+                old_desc = old_desc[0]
+            elif not isinstance(old_desc, str):
+                old_desc = str(old_desc) if old_desc is not None else ""
+
             new_desc = raw_properties.get("description", "")
 
             if new_desc in old_desc:
                 raw_properties["description"] = old_desc
-                raw_properties["embedding"] = old_props.get("embedding")
+                old_emb = old_props.get("embedding")
+                if isinstance(old_emb, list) and len(old_emb) > 0 and isinstance(old_emb[0], list):
+                    old_emb = old_emb[0]
+                raw_properties["embedding"] = old_emb
             else:
-                raw_properties["description"] = (
-                    f"{old_desc} | 最新线索：{new_desc}"
-                )
-                print(
-                    f"正在为融合后的实体 【{properties['name']}】 重新生成向量..."
-                )
+                raw_properties["description"] = f"{old_desc} | 最新线索：{new_desc}"
+                print(f"正在为融合后的实体 【{raw_name}】 重新生成向量...")
                 response = self.client.embeddings.create(
                     model=config["embedding_model"],
                     input=[raw_properties["description"]],
                 )
                 raw_properties["embedding"] = response.data[0].embedding
 
-        #  核心防御 2：属性严格清洗白名单
-        # 假设Hubble 里的实体属性【只建了】这 4 个，那就只允许这 4 个 Key 提交给后端！
-        # 如果还建了别属性（比如 category），把它加进这个列表里。
+        # 核心防御 2：属性严格清洗白名单
         ALLOWED_KEYS = ["name", "entity_type", "description", "embedding"]
 
         final_cleaned_props = {}
@@ -131,14 +145,11 @@ class GraphDBHandler:
         try:
             post_response = requests.post(post_url, json=post_data)
             post_response.raise_for_status()
-            print(f"🟢 顶点 【{properties['name']}】 成功安全入库/融合！")
+            print(f"🟢 顶点 【{raw_name}】 成功安全入库/融合！")
             return post_response.json()
         except requests.exceptions.RequestException as e:
-            print(
-                f"❌ 写入/更新顶点 【{properties['name']}】 彻底失败: {e}"
-            )
+            print(f"❌ 写入/更新顶点 【{raw_name}】 彻底失败: {e}")
             if post_response is not None:
-                # 这里将向你吐露它最后为什么不爽（比如具体哪个属性没对齐）
                 print(f"【HugeGraph 后端真实拒绝原因】: {post_response.text}")
             return None
     
@@ -204,7 +215,7 @@ def insert_news_to_db():
 # 从爬虫获取的新闻中提取实体和关系，并插入至数据库
 def insert_sp_news_to_db():
     news_list = spider.get_news_list()
-    for news in news_list[:10]:
+    for news in news_list[:3]:
         detail_url = news['url']
         text = spider.crawl_detail_page(detail_url)
         if text:
