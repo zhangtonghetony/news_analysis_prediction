@@ -217,13 +217,17 @@ def insert_sp_news_to_db():
     news_list = spider.get_news_list()
     for news in news_list[:5]:
         detail_url = news['url']
+        publish_time = news['publish_time']
+
         text = spider.crawl_detail_page(detail_url)
         if text:
-            entities = entityextractor.final_extract_entities(text)
+            # 合并发布时间和文本内容，提取实体
+            text_to_send = f"时间：{publish_time}\n{text}"
+            entities = entityextractor.final_extract_entities(text_to_send)
             for entity in entities:
                 graph_handler.add_vertex(entity)
             
-            relations = relationextractor.final_extract_relations(entities, text)
+            relations = relationextractor.final_extract_relations(entities, text_to_send)
             for relation in relations:
                 graph_handler.add_edge(relation)
 
