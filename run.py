@@ -94,6 +94,7 @@ def continuous_spider_flow():
                     aid = news['aid']
                     title = news.get('title', '')
                     detail_url = news['url']
+                    publish_time = news.get('publish_time', '未知')  # 提取爬虫新增的发布时间字段
                     
                     # 抓取正文（爬虫时不需要上锁）
                     text = spider.crawl_detail_page(detail_url)
@@ -101,9 +102,12 @@ def continuous_spider_flow():
                     if text:
                         print(f"📄 正在处理新闻: {title}")
                         
-                        # 提取实体和关系（提取过程比较耗时，不需要加锁）
-                        entities = entity_extractor.final_extract_entities(text)
-                        relations = relation_extractor.final_extract_relations(entities, text)
+                        # 升级时间功能：合并发布时间和文本内容，为大模型推理打下时序基础
+                        text_to_send = f"时间：{publish_time}\n{text}"
+                        
+                        # 提取实体和关系（提取过程比较耗时，不需要加锁）使用拼接了时间戳的文本
+                        entities = entity_extractor.final_extract_entities(text_to_send)
+                        relations = relation_extractor.final_extract_relations(entities, text_to_send)
                         
                         # 第三步：真正往 HugeGraph 写入数据时，必须上锁，防止并发冲突
                         with db_lock:
