@@ -215,7 +215,7 @@ def insert_news_to_db():
 # 从爬虫获取的新闻中提取实体和关系，并插入至数据库
 def insert_sp_news_to_db():
     news_list = spider.get_news_list()
-    for news in news_list[:3]:
+    for news in news_list[:5]:
         detail_url = news['url']
         text = spider.crawl_detail_page(detail_url)
         if text:

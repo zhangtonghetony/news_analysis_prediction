@@ -13,7 +13,7 @@ class NewsSpider:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
 
-    def get_news_list(self)->list:
+    def get_news_list(self)->list[dict]:
         """解析列表页，获取所有新闻的标题、代号和拼接后的 URL"""
         self.news_list = []
         try:
