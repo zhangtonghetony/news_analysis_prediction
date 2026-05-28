@@ -2,6 +2,8 @@
 
 这是一个基于大语言模型（LLM）的实时地缘政治与金融风险分析系统。系统通过分析以国际新闻为主的各种文本，动态抽取关键实体（国家、组织、人物、军事力量、金融资产等）及其深层关联，并在前端提供**交互式知识图谱拓扑网**与**多状态混合事件时间轴**的双重可视化呈现。
 
+This is a real-time geopolitical and financial risk analysis system powered by Large Language Models (LLMs). By analyzing diverse text sources, primarily international news, the system dynamically extracts key entities (such as countries, organizations, individuals, military forces, and financial assets) and their deep interconnections. It then provides a dual-visualized presentation on the frontend, featuring an interactive knowledge graph topology network and a multi-state hybrid event timeline.
+
 ---
 
 ## ✨ 核心特性
@@ -13,6 +15,19 @@
     * 针对地缘政治或金融暗流中**“发生时间暂不明确（Unknown）”**的边关系，系统引入了**“优雅降级”的分栏机制**。
     * 确切历史节点按时间流升序排列，未知时间的事实单独开辟`⏳ 发生时间待定关联事件`桶进行背景补充，确保数据积累期系统依然高饱满度、高可用。
 * **全链条点击联动**：无论在拓扑图中点击节点/连线，还是在时间轴上点击未知时间的事件，系统均能精准联动，自动定位图谱核心并弹出侧边抽屉（Drawer）展示详细的事实线索、可信得分和背景描述。
+
+* ✨ Core Features
+LLM-Driven Intelligent Text Analysis: Leverages large language models to perform deep semantic extraction on fragmented geopolitical, military, or financial analysis texts.
+
+Dynamic Ontology: Utilizes web crawlers to fetch news in real time, enabling dynamic updates to the ontology; it also incorporates a robust pipeline for entity deduplication and fusion.
+
+Interactive Topology Network Graph (vis-network): Dynamically renders complex web-like relationships between entities, supporting interactive features such as node panning, zooming, highlight focusing, and edge/link interactions.
+
+Multi-State Hybrid Timeline (Fault-Tolerant & Progressive Design): Addresses the challenge of relationship edges where the "occurrence time is not yet clear (Unknown)" in geopolitical or financial undercurrents by introducing a "graceful degradation" compartmentalization mechanism.
+
+Definitive historical milestones are sorted in ascending chronological order, while facts with unknown times are funneled into a dedicated ⏳ Pending Time Associated Events bucket as background context. This ensures the system remains data-rich and highly usable during the data accumulation phase.
+
+Full-Chain Click Linkage: Whether clicking a node/edge in the topology graph or an unknown-time event on the timeline, the system achieves precise synchronization—automatically re-centering and focusing on the core of the graph while popping up a side drawer to display detailed factual clues, confidence scores, and background descriptions.
 
 ---
 
