@@ -3,17 +3,48 @@ import requests
 from datetime import datetime
 # BeautifulSoup 是一个用于解析 HTML 和 XML 文档的 Python 库，能够方便地从网页中提取数据
 from bs4 import BeautifulSoup
+from abc import ABC, abstractmethod
 
 
-class NewsSpider:
+class BaseNewsSpider(ABC):
+    """新闻爬虫的抽象基类，定义所有新闻爬虫必须遵守的接口规范"""
 
-    def __init__(self):
-        """初始化爬虫类"""
-        self.news_list = []
-        self.URL = "https://mil.huanqiu.com"
+    def __init__(self, base_url: str):
+        self.URL = base_url
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
+
+    @abstractmethod
+    def get_news_list(self) -> list[dict]:
+        """抽象方法：解析列表页，获取新闻列表
+
+        各个网站的 HTML 结构不同，由子类具体去实现解析逻辑。
+        规范返回值：包含新闻基础信息的字典列表 [ {"title":...,"id":...,"url":..., "publish_time":...}, ... ]
+        """
+        pass
+
+    @abstractmethod
+    def crawl_detail_page(self, detail_url: str) -> str:
+        """抽象方法：访问具体新闻详情页，提取精准纯文本正文
+
+        由子类具体实现针对特定网站详情页的特殊清洗逻辑。
+        规范返回值：清洗后的纯文本字符串
+        """
+        pass
+
+
+
+
+
+
+# 环球网新闻爬虫(继承自 BaseNewsSpider)
+class NewsSpider(BaseNewsSpider):
+
+    def __init__(self):
+        """初始化爬虫类"""
+        super().__init__("https://mil.huanqiu.com")
+        self.news_list = []
 
     def _convert_timestamp(self, ts_str: str) -> str:
         """内部辅助函数：将13位毫秒时间戳字符串转换为 xxxx-xx-xx 格式"""
