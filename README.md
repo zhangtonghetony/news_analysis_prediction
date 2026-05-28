@@ -16,7 +16,7 @@ This is a real-time geopolitical and financial risk analysis system powered by L
     * 确切历史节点按时间流升序排列，未知时间的事实单独开辟`⏳ 发生时间待定关联事件`桶进行背景补充，确保数据积累期系统依然高饱满度、高可用。
 * **全链条点击联动**：无论在拓扑图中点击节点/连线，还是在时间轴上点击未知时间的事件，系统均能精准联动，自动定位图谱核心并弹出侧边抽屉（Drawer）展示详细的事实线索、可信得分和背景描述。
 
-* ✨ Core Features
+✨ Core Features
 LLM-Driven Intelligent Text Analysis: Leverages large language models to perform deep semantic extraction on fragmented geopolitical, military, or financial analysis texts.
 
 Dynamic Ontology: Utilizes web crawlers to fetch news in real time, enabling dynamic updates to the ontology; it also incorporates a robust pipeline for entity deduplication and fusion.
