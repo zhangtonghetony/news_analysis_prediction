@@ -186,13 +186,18 @@ class RelationsExtractor:
             result_vectors.append((weighted / norm if norm > 0 else weighted).tolist())
         return result_vectors
         
-
     def final_extract_relations(self, entities_list: list[dict], original_text: str) -> list[dict]:
+
         relations = self._extract_relations(entities_list, original_text)
+
         result_vectors = self._relation_embedding(relations)
+
         for i in range(len(relations)):
+
             relations[i]['embeddings'] = result_vectors[i]
+
         return relations
+
 
       
 

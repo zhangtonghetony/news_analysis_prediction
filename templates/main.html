@@ -2,411 +2,159 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>地缘政治、军事与金融 analysis 系统</title>
+    <title>地缘政治与金融分析系统</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
     <style>
-        * {
+        body.camouflage-bg {
             margin: 0;
-            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        .header {
+            background-color: #1e293b;
+            color: white;
+            padding: 15px 20px;
+        }
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; }
+        .collect-btn { background: #3b82f6; border: none; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        
+        .status-bar { padding: 10px 20px; background: #e0f2fe; display: flex; gap: 10px; font-size: 14px; }
+        
+        .main-content {
+            display: flex;
+            height: calc(100vh - 60px);
+            padding: 15px;
+            gap: 15px;
             box-sizing: border-box;
         }
-
-        body {
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #0a0e17 0%, #1a1f35 50%, #0d1321 100%);
-            min-height: 100vh;
-            color: #e8e8e8;
-        }
-
-        /* 头部样式 */
-        .header {
-            background: linear-gradient(90deg, #1e3a5f 0%, #2d4a6f 50%, #1e3a5f 100%);
-            padding: 15px 30px;
-            border-bottom: 2px solid #4a6fa5;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
+        
+        /* 左侧面板：上方输入，下方拓扑图与时间轴 */
+        .left-panel {
+            flex: 1.2;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 15px;
+            height: 100%;
         }
-
-        .logo {
+        .query-section {
+            background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .query-input {
+            width: 100%; height: 80px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px; resize: none; box-sizing: border-box;
+        }
+        .submit-btn {
+            margin-top: 10px; width: 100%; padding: 10px; background: #0f172a; color: white; border: none; border-radius: 4px; cursor: pointer;
+        }
+        
+        /* 节点展示区域变为图拓扑与时间轴复合区 */
+        .nodes-section {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .section-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; display: flex; }
+        
+        /* 图画布与时间轴左右双栏切分 */
+        .visual-wrapper {
+            display: flex;
+            flex: 1;
+            gap: 10px;
+            min-height: 0;
+        }
+        /* 拓扑图容器 */
+        #graphContainer {
+            flex: 1.4;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fafafa;
+            position: relative;
+        }
+        /* 时间轴纵向容器 */
+        #timelineContainer {
+            flex: 1.1;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 10px;
+            overflow-y: auto;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
             gap: 15px;
         }
-
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #4a90d9, #2d5a87);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            box-shadow: 0 0 15px rgba(74, 144, 217, 0.4);
-        }
-
-        .logo-text {
-            font-size: 22px;
-            font-weight: bold;
-            background: linear-gradient(90deg, #6ab0ff, #a8d4ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .collect-btn {
-            background: linear-gradient(135deg, #2d5a87, #1e3a5f);
-            border: 1px solid #4a90d9;
-            color: #6ab0ff;
-            padding: 10px 25px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .collect-btn:hover {
-            background: linear-gradient(135deg, #3d6a97, #2e4a6f);
-            box-shadow: 0 0 15px rgba(74, 144, 217, 0.3);
-            transform: translateY(-1px);
-        }
-
-        .collect-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* 主内容区域 */
-        .main-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 20px;
-        }
-
-        /* 查询区域 */
-        .query-section {
-            background: linear-gradient(180deg, #1a1f35 0%, #151a28 100%);
-            border: 1px solid #2d4a6f;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #6ab0ff;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #2d4a6f;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .section-title::before {
-            content: '';
-            width: 4px;
-            height: 16px;
-            background: linear-gradient(180deg, #4a90d9, #2d5a87);
-            border-radius: 2px;
-        }
-
-        .query-input {
-            width: 100%;
-            height: 120px;
-            background: #0d1321;
-            border: 1px solid #2d4a6f;
-            border-radius: 8px;
-            padding: 15px;
-            color: #e8e8e8;
-            font-size: 14px;
-            resize: none;
-            transition: all 0.3s ease;
-            font-family: inherit;
-        }
-
-        .query-input:focus {
-            outline: none;
-            border-color: #4a90d9;
-            box-shadow: 0 0 15px rgba(74, 144, 217, 0.2);
-        }
-
-        .query-input::placeholder {
-            color: #5a6a8a;
-        }
-
-        .submit-btn {
-            width: 100%;
-            margin-top: 15px;
-            background: linear-gradient(135deg, #4a90d9, #2d5a87);
-            border: none;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .submit-btn:hover {
-            background: linear-gradient(135deg, #5a9fe9, #3d6a97);
-            box-shadow: 0 0 20px rgba(74, 144, 217, 0.4);
-            transform: translateY(-1px);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* 检索到的节点 */
-        .nodes-section {
-            background: linear-gradient(180deg, #1a1f35 0%, #151a28 100%);
-            border: 1px solid #2d4a6f;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            margin-top: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .nodes-section::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .nodes-section::-webkit-scrollbar-track {
-            background: #0d1321;
-            border-radius: 3px;
-        }
-
-        .nodes-section::-webkit-scrollbar-thumb {
-            background: #2d4a6f;
-            border-radius: 3px;
-        }
-
-        .node-item {
-            background: #0d1321;
-            border: 1px solid #2d4a6f;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .node-item:hover {
-            border-color: #4a90d9;
-            background: #121a2d;
-        }
-
-        .node-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        .node-name {
-            font-weight: 600;
-            color: #6ab0ff;
-        }
-
-        .node-type {
-            font-size: 12px;
-            color: #8a9ab0;
-            background: #1e3a5f;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-
-        .node-description {
-            font-size: 13px;
-            color: #a0a8b8;
-            line-height: 1.5;
-        }
-
-        .relation-arrow {
-            color: #4a90d9;
-            margin: 0 5px;
-        }
-
-        /* 回答区域 */
-        .answer-section {
-            background: linear-gradient(180deg, #1a1f35 0%, #151a28 100%);
-            border: 1px solid #2d4a6f;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            min-height: 500px;
+        
+        /* 🕒 时间轴分组小面板（明确定时与未定时） */
+        .timeline-section-block {
             display: flex;
             flex-direction: column;
         }
-
-        .answer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #2d4a6f;
+        .block-sub-title {
+            font-size: 12px; color: #64748b; font-weight: bold; 
+            background: #f1f5f9; padding: 4px 8px; border-radius: 4px; margin-bottom: 10px;
         }
 
-        .answer-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #6ab0ff;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: #4a90d9;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        .clear-btn {
-            background: transparent;
-            border: 1px solid #4a90d9;
-            color: #4a90d9;
-            padding: 6px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.3s ease;
-        }
-
-        .clear-btn:hover {
-            background: #4a90d9;
-            color: white;
-        }
-
-        .answer-content {
+        /* 右侧大模型分析报告区 */
+        .answer-section {
             flex: 1;
-            font-size: 15px;
-            line-height: 1.8;
-            color: #d0d8e8;
-            overflow-y: auto;
-            max-height: 65vh;
-            padding-right: 5px;
+            background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; height: 100%;
+        }
+        .answer-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .answer-content { flex: 1; overflow-y: auto; border-top: 1px solid #f1f5f9; padding-top: 10px; line-height: 1.6; }
+        
+        /* 标准时序时间轴项目 */
+        .timeline-item {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 12px;
+            border-left: 2px solid #3b82f6;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .timeline-item:hover { background: #f0fdf4; }
+        .timeline-item::before {
+            content: ''; position: absolute; left: -6px; top: 4px;
+            width: 10px; height: 10px; background: #3b82f6; border-radius: 50%;
+        }
+        /* 针对时间未知项目的特殊样式降级（虚线、灰色标识） */
+        .timeline-item.unknown-time {
+            border-left: 2px dashed #94a3b8;
+        }
+        .timeline-item.unknown-time::before {
+            background: #94a3b8;
         }
 
-        .answer-content::-webkit-scrollbar {
-            width: 6px;
+        .timeline-time { font-size: 12px; color: #64748b; font-weight: bold; }
+        .timeline-title { font-size: 13px; font-weight: 600; color: #1e293b; margin: 2px 0; }
+        
+        /* 点击查看详情的侧边抽屉(Drawer) */
+        .detail-drawer {
+            position: fixed; top: 0; right: -350px; width: 320px; height: 100%;
+            background: white; box-shadow: -4px 0 10px rgba(0,0,0,0.1);
+            z-index: 999; padding: 20px; box-sizing: border-box;
+            transition: right 0.3s ease;
         }
-        .answer-content::-webkit-scrollbar-thumb {
-            background: #2d4a6f;
-            border-radius: 3px;
-        }
-
-        .answer-content:empty::before {
-            content: '在此显示分析报告...';
-            color: #5a6a8a;
-            font-style: italic;
-        }
-
-        /* 💡 优雅的 Markdown 流式排版适配样式 */
-        .answer-content h1, .answer-content h2, .answer-content h3 {
-            color: #6ab0ff;
-            margin: 15px 0 10px 0;
-            font-weight: 600;
-        }
-        .answer-content h3 { font-size: 17px; }
-        .answer-content p { margin-bottom: 12px; text-align: justify; }
-        .answer-content strong { color: #fff; font-weight: 600; }
-        .answer-content ul, .answer-content ol { margin-left: 20px; margin-bottom: 12px; }
-        .answer-content li { margin-bottom: 4px; }
-
-        .thinking-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .thinking-dot {
-            width: 6px;
-            height: 6px;
-            background: #4a90d9;
-            border-radius: 50%;
-            animation: think 1s infinite;
-        }
-
-        .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
-        .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes think {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-
-        /* 状态提示 */
-        .status-bar {
-            background: linear-gradient(90deg, #1e3a5f, #2d4a6f);
-            padding: 10px 20px;
-            margin-bottom: 20px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: #6ab0ff;
-            max-width: 1400px;
-            margin: 20px auto 0 auto;
-        }
-
-        .status-success { color: #4ade80; }
-        .status-warning { color: #fbbf24; }
-        .status-error { color: #f87171; }
-
-        /* 军事风格装饰 */
-        .camouflage-bg {
-            background-image: 
-                radial-gradient(circle at 20% 80%, rgba(45, 74, 111, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(74, 144, 217, 0.05) 0%, transparent 50%);
-        }
-
-        /* 响应式设计 */
-        @media (max-width: 1024px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-            
-            .nodes-section {
-                max-height: 300px;
-            }
-        }
+        .detail-drawer.open { right: 0; }
+        .drawer-close { float: right; cursor: pointer; font-size: 20px; }
+        .drawer-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;}
+        .drawer-prop { margin-bottom: 10px; font-size: 14px; }
+        .drawer-label { font-weight: bold; color: #475569; }
     </style>
 </head>
 <body class="camouflage-bg">
+
     <div class="header">
         <div class="header-content">
             <div class="logo">
@@ -414,51 +162,42 @@
                 <div class="logo-text">地缘政治与金融分析系统</div>
             </div>
             <button class="collect-btn" id="collectBtn">
-                <span>📊</span>
-                <span id="collectText">收集数据</span>
+                <span>📊</span> <span id="collectText">收集数据</span>
             </button>
         </div>
     </div>
 
     <div class="status-bar" id="statusBar" style="display: none;">
-        <span id="statusIcon">📡</span>
-        <span id="statusMessage"></span>
+        <span id="statusIcon">📡</span> <span id="statusMessage"></span>
     </div>
 
     <div class="main-content">
         <div class="left-panel">
             <div class="query-section">
                 <div class="section-title">输入查询</div>
-                <textarea 
-                    class="query-input" 
-                    id="queryInput" 
-                    placeholder="请输入您的地缘政治、军事或金融分析问题...&#10;&#10;例如：&#10;最近以色列在黎巴嫩南部的军事行动会对金融避险资产产生什么传导影响？&#10;美国加息政策对新兴 market 的影响分析"></textarea>
+                <textarea class="query-input" id="queryInput" placeholder="请输入地缘政治、军事或金融分析问题... (Ctrl + Enter 提交)"></textarea>
                 <button class="submit-btn" id="submitBtn">
-                    <span>🔍</span>
-                    <span>开始分析</span>
+                    <span>🔍</span> <span>开始分析</span>
                 </button>
             </div>
 
             <div class="nodes-section">
                 <div class="section-title">
-                    <span>检索到的节点</span>
+                    <span>知识图谱拓扑网 & 事件时序轴</span>
                     <span id="nodesCount" style="margin-left: auto; font-weight: normal; font-size: 13px;">0 条</span>
                 </div>
-                <div id="nodesContainer"></div>
+                <div class="visual-wrapper">
+                    <div id="graphContainer"></div>
+                    <div id="timelineContainer"></div>
+                </div>
             </div>
         </div>
 
         <div class="answer-section">
             <div class="answer-header">
                 <div class="answer-title">
-                    <span>📈</span>
-                    <span>分析报告</span>
+                    <span>📈</span> <span>分析报告</span>
                     <span class="status-dot" id="statusDot" style="display: none;"></span>
-                    <span class="thinking-indicator" id="thinkingIndicator" style="display: none;">
-                        <span class="thinking-dot"></span>
-                        <span class="thinking-dot"></span>
-                        <span class="thinking-dot"></span>
-                    </span>
                 </div>
                 <button class="clear-btn" id="clearBtn">清空</button>
             </div>
@@ -466,101 +205,209 @@
         </div>
     </div>
 
+    <div class="detail-drawer" id="detailDrawer">
+        <span class="drawer-close" id="drawerClose">×</span>
+        <div class="drawer-title" id="drawerTitle">详情信息</div>
+        <div id="drawerBody"></div>
+    </div>
+
     <script>
-        // DOM 元素声明
         const queryInput = document.getElementById('queryInput');
         const submitBtn = document.getElementById('submitBtn');
         const answerContent = document.getElementById('answerContent');
-        const nodesContainer = document.getElementById('nodesContainer');
         const nodesCount = document.getElementById('nodesCount');
+        const graphContainer = document.getElementById('graphContainer');
+        const timelineContainer = document.getElementById('timelineContainer');
+        const detailDrawer = document.getElementById('detailDrawer');
+        const drawerTitle = document.getElementById('drawerTitle');
+        const drawerBody = document.getElementById('drawerBody');
+        const drawerClose = document.getElementById('drawerClose');
         const statusDot = document.getElementById('statusDot');
-        const thinkingIndicator = document.getElementById('thinkingIndicator');
         const clearBtn = document.getElementById('clearBtn');
-        const collectBtn = document.getElementById('collectBtn');
-        const collectText = document.getElementById('collectText');
-        const statusBar = document.getElementById('statusBar');
-        const statusIcon = document.getElementById('statusIcon');
-        const statusMessage = document.getElementById('statusMessage');
 
-        // 全局全局文本变量，维护大模型未被转义的 Markdown 原文
         let rawAnswerMarkdown = "";
+        let networkInstance = null;
 
-        // 显示状态提示句柄
-        function showStatus(message, type = 'info') {
-            statusBar.style.display = 'flex';
-            statusMessage.textContent = message;
+        drawerClose.addEventListener('click', () => detailDrawer.classList.remove('open'));
+
+        // 核心修改点：完美支持及包容 unknown 时间的数据
+        function renderGraphAndTimeline(facts) {
+            if (!facts || !Array.isArray(facts)) return;
+            nodesCount.textContent = `${facts.length} 个实体/关系`;
+
+            const nodeMap = new Map();
+            const edges = [];
             
-            switch(type) {
-                case 'success':
-                    statusIcon.textContent = '✅';
-                    statusBar.className = 'status-bar status-success';
-                    break;
-                case 'warning':
-                    statusIcon.textContent = '⚠️';
-                    statusBar.className = 'status-bar status-warning';
-                    break;
-                case 'error':
-                    statusIcon.textContent = '❌';
-                    statusBar.className = 'status-bar status-error';
-                    break;
-                default:
-                    statusIcon.textContent = '📡';
-                    statusBar.className = 'status-bar';
+            // 建立两个事件队列：一个存放已知具体时间的，一个存放未知的（作备用积攒展示）
+            const knownTimelineEvents = [];
+            const unknownTimelineEvents = [];
+
+            facts.forEach(item => {
+                if (item.type === 'entity') {
+                    nodeMap.set(item.name, {
+                        id: item.name, label: item.name, shape: 'dot', size: 22,
+                        color: { background: '#93c5fd', border: '#2563eb' },
+                        font: { size: 14, color: '#1e293b' },
+                        properties: { type: item.entity_type, desc: item.description }
+                    });
+                }
+            });
+
+            facts.forEach(item => {
+                if (item.type === 'relationship' || ('source' in item && 'target' in item)) {
+                    const src = item.source;
+                    const tgt = item.target;
+                    if (!src || !tgt) return;
+
+                    if (!nodeMap.has(src)) {
+                        nodeMap.set(src, { id: src, label: src, shape: 'dot', size: 16, color: '#cbd5e1', properties: { type: '未知', desc: '关联节点' } });
+                    }
+                    if (!nodeMap.has(tgt)) {
+                        nodeMap.set(tgt, { id: tgt, label: tgt, shape: 'dot', size: 16, color: '#cbd5e1', properties: { type: '未知', desc: '关联节点' } });
+                    }
+
+                    edges.push({
+                        from: src, to: tgt, label: item.label, arrows: 'to',
+                        color: { color: '#64748b', highlight: '#ef4444' },
+                        font: { align: 'horizontal', size: 11, color: '#475569' },
+                        properties: { desc: item.description, score: item.score, time: item.time }
+                    });
+
+                    // 🛠️ 核心防御：对时间进行细粒度分类
+                    const isUnknown = !item.time || item.time === 'unknown' || item.time.trim() === "";
+                    const eventPayload = {
+                        time: isUnknown ? '暂未指明时间' : item.time,
+                        title: `【${src}】─(${item.label})─►【${tgt}】`,
+                        desc: item.description || '无历史细节描述',
+                        associatedNode: src
+                    };
+
+                    if (isUnknown) {
+                        unknownTimelineEvents.push(eventPayload);
+                    } else {
+                        knownTimelineEvents.push(eventPayload);
+                    }
+                }
+            });
+
+            // 🌐 1. 渲染拓扑网络关系图（完全不受未知时间影响）
+            const graphData = { nodes: new vis.DataSet(Array.from(nodeMap.values())), edges: new vis.DataSet(edges) };
+            const options = {
+                physics: { barnesHut: { gravitationalConstant: -2500, centralGravity: 0.3, springLength: 95 }, stabilization: { iterations: 40 } },
+                interaction: { hover: true, selectConnectedEdges: true }
+            };
+            if (networkInstance) networkInstance.destroy();
+            networkInstance = new vis.Network(graphContainer, graphData, options);
+
+            networkInstance.on("click", function (params) {
+                if (params.nodes.length > 0) {
+                    const nodeData = graphData.nodes.get(params.nodes[0]);
+                    openPropertyDrawer(nodeData.label, '节点类型', nodeData.properties.type, '详细描述', nodeData.properties.desc);
+                } else if (params.edges.length > 0) {
+                    const edgeData = graphData.edges.get(params.edges[0]);
+                    openPropertyDrawer(`关系: ${edgeData.label}`, '发生时间', edgeData.properties.time || '未知/积攒中', '可信得分', edgeData.properties.score, '事实线索', edgeData.properties.desc);
+                }
+            });
+
+            // 🕒 2. 改造后的时序/未知混合时间轴渲染
+            timelineContainer.innerHTML = '';
+
+            // A. 先渲染有明确时间节点的块（进行升序排列）
+            if (knownTimelineEvents.length > 0) {
+                knownTimelineEvents.sort((a, b) => String(a.time).localeCompare(String(b.time)));
+                
+                const knownBlock = document.createElement('div');
+                knownBlock.className = 'timeline-section-block';
+                knownBlock.innerHTML = `<div class="block-sub-title">📅 确切历史节点 (${knownTimelineEvents.length})</div>`;
+                
+                knownTimelineEvents.forEach(ev => {
+                    const itemEl = createTimelineItemEl(ev, false);
+                    knownBlock.appendChild(itemEl);
+                });
+                timelineContainer.appendChild(knownBlock);
             }
-            
-            if (type !== 'warning') {
-                setTimeout(() => {
-                    statusBar.style.display = 'none';
-                }, 5000);
+
+            // B. 紧接着优雅平铺渲染时间为 unknown 的块（作为数据背景补充，依然保留联动能力！）
+            if (unknownTimelineEvents.length > 0) {
+                const unknownBlock = document.createElement('div');
+                unknownBlock.className = 'timeline-section-block';
+                unknownBlock.innerHTML = `<div class="block-sub-title">⏳ 发生时间待定关联事件 (${unknownTimelineEvents.length})</div>`;
+                
+                unknownTimelineEvents.forEach(ev => {
+                    const itemEl = createTimelineItemEl(ev, true);
+                    unknownBlock.appendChild(itemEl);
+                });
+                timelineContainer.appendChild(unknownBlock);
+            }
+
+            if(knownTimelineEvents.length === 0 && unknownTimelineEvents.length === 0) {
+                timelineContainer.innerHTML = '<div style="color:#94a3b8; font-size:13px; text-align:center; padding-top:20px;">图谱中未包含可抽取事件</div>';
             }
         }
 
-        // 核心：提交流式查询接口
+        // 辅助函数：创建可互动的时间轴条目
+        function createTimelineItemEl(ev, isUnknown) {
+            const evItem = document.createElement('div');
+            evItem.className = `timeline-item ${isUnknown ? 'unknown-time' : ''}`;
+            evItem.innerHTML = `
+                <div class="timeline-time">${escapeHtml(ev.time)}</div>
+                <div class="timeline-title">${escapeHtml(ev.title)}</div>
+            `;
+            evItem.addEventListener('click', () => {
+                if (networkInstance && ev.associatedNode) {
+                    networkInstance.selectNodes([ev.associatedNode]);
+                    networkInstance.focus(ev.associatedNode, { scale: 1.2, animation: true });
+                    openPropertyDrawer(isUnknown ? '时间待定事实' : '历史时序节点', '关系事实', ev.title, '线索详情', ev.desc);
+                }
+            });
+            return evItem;
+        }
+
+        function openPropertyDrawer(title, ...props) {
+            drawerTitle.textContent = title;
+            let bodyHtml = "";
+            for (let i = 0; i < props.length; i += 2) {
+                bodyHtml += `
+                    <div class="drawer-prop">
+                        <div class="drawer-label">${escapeHtml(props[i])}:</div>
+                        <div style="color: #1e293b; margin-top:2px;">${escapeHtml(props[i+1] || '无')}</div>
+                    </div>
+                `;
+            }
+            drawerBody.innerHTML = bodyHtml;
+            detailDrawer.classList.add('open');
+        }
+
+        // 保持流式请求管道
         submitBtn.addEventListener('click', async () => {
             const query = queryInput.value.trim();
-            if (!query) {
-                showStatus('请输入查询内容', 'warning');
-                return;
-            }
+            if (!query) return;
 
-            // UI 状态重置与清洗
             answerContent.innerHTML = '';
-            nodesContainer.innerHTML = '';
-            nodesCount.textContent = '0 条';
+            timelineContainer.innerHTML = '';
             rawAnswerMarkdown = ''; 
-
-            // 激活加载及思考指示器
+            detailDrawer.classList.remove('open');
             submitBtn.disabled = true;
             statusDot.style.display = 'inline-block';
-            thinkingIndicator.style.display = 'inline-flex';
 
             try {
-                // 基于 Fetch API 开启 POST 请求，读取底层 ReadableStream
                 const response = await fetch('/query', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query: query })
                 });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP 异常! 状态码: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP 异常! 状态: ${response.status}`);
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
-                let buffer = ''; // 🟢 建立数据缓冲区，完美抵抗因网络因素导致的数据断包与粘包
+                let buffer = ''; 
 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
 
-                    // 将网络碎片注入缓冲区
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split('\n');
-                    
-                    // 核心关键：弹出并暂存未闭合的末尾流残片，其余行推进业务解析
                     buffer = lines.pop(); 
                     
                     for (const line of lines) {
@@ -569,82 +416,27 @@
                             try {
                                 const jsonStr = trimmedLine.substring(6).trim();
                                 if (!jsonStr) continue;
-                                
                                 const parsedData = JSON.parse(jsonStr);
                                 
-                                // 🟢 完美对齐后端修正后的 'nodes' 标志
                                 if (parsedData.type === 'nodes') {
-                                    displayNodes(parsedData.data);
-                                } 
-                                // 🟢 持续无缝追加大模型正文
-                                else if (parsedData.type === 'answer') {
+                                    renderGraphAndTimeline(parsedData.data);
+                                } else if (parsedData.type === 'answer') {
                                     rawAnswerMarkdown += parsedData.data;
-                                    // 运用 Marked 库将 Markdown 原文实时编译为美观的 HTML 网页元素
                                     answerContent.innerHTML = marked.parse(rawAnswerMarkdown);
-                                    // 自动触底滚动，优化视觉纵深
                                     answerContent.scrollTop = answerContent.scrollHeight;
                                 }
-                            } catch (e) {
-                                // 针对边界极小概率的微瑕碎数据包做兼容忽略
-                                console.warn("流解析异常处理并跳过: ", e);
-                            }
+                            } catch (e) {}
                         }
                     }
                 }
-
-                showStatus('分析完成', 'success');
             } catch (error) {
-                console.error('查询失败:', error);
-                answerContent.textContent = '查询失败，请稍后重试。原因: ' + error.message;
-                showStatus('查询失败: ' + error.message, 'error');
+                answerContent.textContent = '异常: ' + error.message;
             } finally {
-                // 解除锁定并隐藏指示器
                 submitBtn.disabled = false;
                 statusDot.style.display = 'none';
-                thinkingIndicator.style.display = 'none';
             }
         });
 
-        // 渲染图谱实体与关联关系列表
-        function displayNodes(nodes) {
-            nodesContainer.innerHTML = '';
-            if (!nodes || !Array.isArray(nodes)) {
-                nodesCount.textContent = '0 条';
-                return;
-            }
-            nodesCount.textContent = `${nodes.length} 条`;
-
-            nodes.forEach(node => {
-                const nodeItem = document.createElement('div');
-                nodeItem.className = 'node-item';
-                
-                if (node.type === 'entity') {
-                    nodeItem.innerHTML = `
-                        <div class="node-header">
-                            <span class="node-name">${escapeHtml(node.name)}</span>
-                            <span class="node-type">${escapeHtml(node.entity_type || '实体')}</span>
-                        </div>
-                        <div class="node-description">${escapeHtml(node.description || '无描述')}</div>
-                    `;
-                } else if (node.type === 'relationship') {
-                    nodeItem.innerHTML = `
-                        <div class="node-header">
-                            <span class="node-name">
-                                ${escapeHtml(node.source)}
-                                <span class="relation-arrow">──(${escapeHtml(node.label)})──►</span>
-                                ${escapeHtml(node.target)}
-                            </span>
-                            <span class="node-type">关系</span>
-                        </div>
-                        <div class="node-description">${escapeHtml(node.description || '无描述')}</div>
-                    `;
-                }
-                
-                nodesContainer.appendChild(nodeItem);
-            });
-        }
-
-        // 标准安全转义
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
@@ -652,71 +444,19 @@
             return div.innerHTML;
         }
 
-        // 清空重置视图
         clearBtn.addEventListener('click', () => {
             answerContent.innerHTML = '';
-            nodesContainer.innerHTML = '';
+            timelineContainer.innerHTML = '';
             nodesCount.textContent = '0 条';
             queryInput.value = '';
             rawAnswerMarkdown = '';
+            detailDrawer.classList.remove('open');
+            if(networkInstance) { networkInstance.destroy(); networkInstance = null; }
         });
 
-        // 数据离线吞吐/知识图谱构建指令触发
-        collectBtn.addEventListener('click', async () => {
-            if (collectBtn.disabled) return;
-
-            collectBtn.disabled = true;
-            collectText.textContent = '收集中...';
-
-            try {
-                const response = await fetch('/collect_data', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-
-                const result = await response.json();
-                showStatus(result.message, result.status === 'running' ? 'warning' : 'success');
-
-                if (result.status === 'started' || result.status === 'running') {
-                    checkCollectStatus();
-                } else {
-                    collectBtn.disabled = false;
-                    collectText.textContent = '收集数据';
-                }
-            } catch (error) {
-                console.error('数据收集失败:', error);
-                showStatus('数据收集失败: ' + error.message, 'error');
-                collectBtn.disabled = false;
-                collectText.textContent = '收集数据';
-            }
-        });
-
-        // 定时轮询图谱知识抽取状态
-        async function checkCollectStatus() {
-            try {
-                const response = await fetch('/collect_status');
-                const result = await response.json();
-
-                if (result.is_collecting) {
-                    setTimeout(checkCollectStatus, 3000);
-                } else {
-                    collectBtn.disabled = false;
-                    collectText.textContent = '收集数据';
-                    showStatus('数据收集完成', 'success');
-                }
-            } catch (error) {
-                console.error('检查状态失败:', error);
-                collectBtn.disabled = false;
-                collectText.textContent = '收集数据';
-            }
-        }
-
-        // 快捷热键监听：Ctrl + Enter 极速提交
         queryInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
-                e.preventDefault(); // 阻断默认换行
+                e.preventDefault();
                 submitBtn.click();
             }
         });
