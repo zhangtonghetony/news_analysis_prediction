@@ -7,11 +7,37 @@ from spider_news import NewsSpider
 from entities_extraction import EntityExtractor
 from relations_extraction import RelationsExtractor
 from openai import OpenAI
+from abc import ABC, abstractmethod
 
 newsfetcher = NewsFetcher()
 entityextractor = EntityExtractor()
 relationextractor = RelationsExtractor()
 spider = NewsSpider()
+
+
+class BaseGraphDBHandler(ABC):
+    """图数据库处理类的抽象基类，定义所有图数据库处理类必须遵守的接口规范"""
+    def __init__(self, graph_url: str, graph_port: str, graph_name: str, base_url: str):
+        self.graph_url = graph_url
+        self.graph_port = graph_port
+        self.graph_name = graph_name
+        self.base_url = base_url
+
+    @abstractmethod
+    def add_vertex(self, properties: dict):
+        """抽象方法：添加顶点到图数据库
+        规范参数：properties - 顶点的属性字典
+        规范返回值：无
+        """
+        pass
+
+    @abstractmethod
+    def add_edge(self, properties: dict):
+        """抽象方法：添加边到图数据库
+        规范参数：properties - 边的属性字典
+        规范返回值：无
+        """
+        pass
 
 
 # 将把新闻数据转换为实体和关系功能封装为一个函数transform_news
@@ -44,20 +70,20 @@ def transform_news():
     return domestic_entities, domestic_relations, foreign_entities, foreign_relations
 
 
-
 # 不使用不稳定的官方库连接数据库，直接使用http请求
-class GraphDBHandler:
+class GraphDBHandler(BaseGraphDBHandler):
     def __init__(self):
-        self.graph_url = config['graph_url']
-        self.graph_port = config['graph_port']
-        self.graph_name = config['graph_name']
-        self.base_url = f"http://{self.graph_url}:{self.graph_port}/graphs/{self.graph_name}"
+        # 提取基础配置变量用于调用父类初始化
+        graph_url = config['graph_url']
+        graph_port = config['graph_port']
+        graph_name = config['graph_name']
+        constructed_base_url = f"http://{graph_url}:{graph_port}/graphs/{graph_name}"
+        
+        super().__init__(graph_url, graph_port, graph_name, constructed_base_url)
 
         self.client = OpenAI(
             api_key=config["api_key"], base_url=config["base_url"]
         )
-
-
 
     def add_vertex(self, properties: dict):
         """
@@ -232,11 +258,6 @@ def insert_sp_news_to_db():
                 graph_handler.add_edge(relation)
 
 
-
-
-
-
-
 if __name__ == '__main__':
     
     # name = "俄罗斯政府"
@@ -244,21 +265,21 @@ if __name__ == '__main__':
     # embedding = [0.1524, -0.3412, 0.8871, 0.0456]
     
     # vertex = graph_handler.add_vertex(
-    #       {
-    #           'name': name,
-    #           'description': desc,
-    #           'embedding': embedding
-    #       }
-    #   )
+    #        {
+    #            'name': name,
+    #            'description': desc,
+    #            'embedding': embedding
+    #        }
+    #    )
     # graph_handler.add_edge(
     # {
-    #     'source': '普京',
-    #     'target': name,
-    #     'relation_type': 'belongs_to',
-    #     'description': desc,
-    #     'time': '2024-01-01',
-    #     'score': 8,
-    #     'embeddings': embedding
+    #      'source': '普京',
+    #      'target': name,
+    #      'relation_type': 'belongs_to',
+    #      'description': desc,
+    #      'time': '2024-01-01',
+    #      'score': 8,
+    #      'embeddings': embedding
     # }
     # )
     insert_sp_news_to_db()
