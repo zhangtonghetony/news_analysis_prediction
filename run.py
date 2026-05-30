@@ -4,6 +4,7 @@ from spider_news import NewsSpider
 from insert2db import insert_news_to_db, GraphDBHandler
 from entities_extraction import EntityExtractor
 from relations_extraction import RelationsExtractor
+from sleep_connection import SleepConnection 
 import threading
 import time
 import json
@@ -25,12 +26,15 @@ relation_extractor = RelationsExtractor()
 # 初始化图数据库处理器
 graph_handler = GraphDBHandler()
 
+# 初始化潜伏关系自动化挖掘与演进引擎
+# 传入已经初始化好的依赖，保持 handler/engine 的实例统一
+sleep_conn = SleepConnection(query_engine=query_engine, db_handler=graph_handler)
+
 # 标记数据收集任务是否正在运行
 is_collecting = False
 
-# 数据库操作锁
+# 数据库操作锁（全局共享，用于保护 HugeGraph 写入冲突）
 db_lock = threading.Lock()
-
 
 
 def scheduled_data_collection():
@@ -55,8 +59,35 @@ def scheduled_data_collection():
         # 等待24小时
         time.sleep(24 * 60 * 60)
 
-# 启动定时任务线程
+# 启动定时新闻数据收集任务线程
 threading.Thread(target=scheduled_data_collection, daemon=True).start()
+
+
+def scheduled_sleep_evolution():
+    """
+    定时任务：潜伏关系网络拓扑演进（Sleep建边）
+    为了和新闻API/爬虫任务错开，程序启动后先等待 2 小时，随后每 24 小时运行一次
+    """
+    print("⏳ 潜伏关系（Sleep）自动演进服务已启动，正在进行前置 2 小时延迟等待错峰...")
+    time.sleep(2 * 60 * 60)  # 启动后先等待 2 小时
+
+    while True:
+        try:
+            print("⏰ 定时任务触发：开始进行全图拓扑 Sleep 关系自动演进...")
+            # 引入全局锁保护，在批量打入 HugeGraph 建边时，防止与流式爬虫、定时任务发生写冲突
+            with db_lock:
+                print("🔒 [Sleep 演进] 已成功夺取数据库全局锁，开始扫描并激活孤岛节点...")
+                sleep_conn.run_daily_evolution(entity_limit=25)
+            print("✅ [Sleep 演进] 本轮深层网状边演进激活完成，已安全释放锁。")
+        except Exception as e:
+            print(f"❌ [Sleep 演进] 本轮演进管道流运行异常: {e}")
+        
+        # 等待 24 小时进行下一轮演进
+        print("不间断 Sleep 演进引擎进入 24 小时休眠等待期...")
+        time.sleep(24 * 60 * 60)
+
+# 启动定时 Sleep 拓扑演进任务线程
+threading.Thread(target=scheduled_sleep_evolution, daemon=True).start()
 
 
 # 全局去重列表：存储所有已经提取过实体新闻的 aid

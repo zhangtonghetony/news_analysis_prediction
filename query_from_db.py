@@ -6,14 +6,41 @@ import urllib.parse
 import json
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+from abc import ABC, abstractmethod
 
 
-class QueryDB:
+class BaseQueryDB(ABC):
+    """查询数据库类的抽象基类，定义所有查询数据库处理类必须遵守的接口规范"""
+    def __init__(self, graph_url: str, graph_port: str, graph_name: str, base_url: str):
+        self.graph_url = graph_url
+        self.graph_port = graph_port
+        self.graph_name = graph_name
+        self.base_url = base_url
+
+    @abstractmethod
+    def query(self, user_input: str, similarity_threshold: float = 0.3):
+        """抽象方法：对外统一暴露的面向前端/路由的 Graph RAG 主入口（返回流式生成器对象）
+        规范参数：user_input - 用户输入的查询文本, similarity_threshold - 相似度阈值
+        """
+        pass
+
+    @abstractmethod
+    def query_with_nodes(self, user_input: str, similarity_threshold: float = 0.3):
+        """抽象方法：对外统一暴露的面向前端/路由的 Graph RAG 主入口（返回检索到的节点和流式生成器对象）
+        规范参数：user_input - 用户输入的查询文本, similarity_threshold - 相似度阈值
+        """
+        pass
+
+
+class QueryDB(BaseQueryDB):
     def __init__(self):
-        self.graph_url = config['graph_url']
-        self.graph_port = config['graph_port']
-        self.graph_name = config['graph_name']
-        self.base_url = f"http://{self.graph_url}:{self.graph_port}/graphs/{self.graph_name}"
+        # 提取基础配置变量用于调用父类初始化
+        graph_url = config['graph_url']
+        graph_port = config['graph_port']
+        graph_name = config['graph_name']
+        constructed_base_url = f"http://{graph_url}:{graph_port}/graphs/{graph_name}"
+
+        super().__init__(graph_url, graph_port, graph_name, constructed_base_url)
 
         # 初始化 OpenAI 客户端
         self.client = OpenAI(
@@ -344,6 +371,8 @@ class QueryDB:
         
         # 返回检索到的节点和流式生成器
         return unique_facts, self._generate_answer(user_input, unique_facts)
+
+
 if __name__ == "__main__":
     # 本地极简联调测试
     query_engine = QueryDB()
